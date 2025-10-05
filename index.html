@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe - Online & AI</title>
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #ec4899 50%, #ef4444 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1f2937;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .btn-computer {
+            background: linear-gradient(135deg, #2563eb, #06b6d4);
+            color: white;
+        }
+
+        .btn-online {
+            background: linear-gradient(135deg, #7c3aed, #ec4899);
+            color: white;
+        }
+
+        .btn-easy {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .btn-medium {
+            background: linear-gradient(135deg, #f59e0b, #ea580c);
+            color: white;
+        }
+
+        .btn-hard {
+            background: linear-gradient(135deg, #dc2626, #ec4899);
+            color: white;
+        }
+
+        .btn-create {
+            background: linear-gradient(135deg, #7c3aed, #ec4899);
+            color: white;
+        }
+
+        .btn-join {
+            background: linear-gradient(135deg, #2563eb, #06b6d4);
+            color: white;
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            padding: 5px;
+        }
+
+        .back-btn:hover {
+            color: #1f2937;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+            color: #9ca3af;
+        }
+
+        .divider-line {
+            flex: 1;
+            height: 1px;
+            background: #d1d5db;
+        }
+
+        .input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #d1d5db;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            text-align: center;
+            font-family: monospace;
+            margin-bottom: 10px;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: #7c3aed;
+        }
+
+        .info-box {
+            background: #dbeafe;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 30px;
+            color: #1e40af;
+            font-size: 0.9rem;
+        }
+
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .room-id {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .copy-btn {
+            background: #f3f4f6;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .copy-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-connected {
+            background: #10b981;
+        }
+
+        .status-waiting {
+            background: #f59e0b;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .score-value.x {
+            color: #7c3aed;
+        }
+
+        .score-value.o {
+            color: #ec4899;
+        }
+
+        .score-value.tie {
+            color: #6b7280;
+        }
+
+        .score-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+
+        .game-status {
+            background: #dbeafe;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e40af;
+        }
+
+        .game-status.winner {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .game-status.tie {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #faf5ff, #fce7f3);
+            border: none;
+            border-radius: 12px;
+            font-size: 3rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .cell:hover:not(:disabled) {
+            transform: scale(1.05);
+            background: #f3e8ff;
+        }
+
+        .cell:disabled {
+            cursor: not-allowed;
+        }
+
+        .cell.x {
+            color: #7c3aed;
+        }
+
+        .cell.o {
+            color: #ec4899;
+        }
+
+        .difficulty-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            background: #dbeafe;
+            color: #1e40af;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .btn-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .btn-title {
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+        }
+
+        .btn-desc {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .warning-box {
+            background: #d1fae5;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 20px;
+            color: #065f46;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="mainMenu">
+            <h1>Tic Tac Toe</h1>
+            <p class="subtitle">Choose your game mode</p>
+            
+            <button class="btn btn-computer" onclick="selectMode('computer')">
+                <span>🤖</span> Play vs Computer
+            </button>
+            
+            <button class="btn btn-online" onclick="selectMode('online')">
+                <span>👥</span> Play with Friend Online
+            </button>
+            
+            <div class="info-box">
+                Challenge the AI or play with friends anywhere in the world!
+            </div>
+        </div>
+
+        <div id="difficultyMenu" class="hidden">
+            <button class="back-btn" onclick="backToMain()">← Back to Menu</button>
+            <h1>Select Difficulty</h1>
+            <p class="subtitle">Choose your challenge level</p>
+            
+            <button class="btn btn-easy" onclick="startGame('easy')">
+                <div class="btn-content">
+                    <div class="btn-title">😊 Easy</div>
+                    <div class="btn-desc">Perfect for beginners</div>
+                </div>
+            </button>
+            
+            <button class="btn btn-medium" onclick="startGame('medium')">
+                <div class="btn-content">
+                    <div class="btn-title">😎 Medium</div>
+                    <div class="btn-desc">Balanced challenge</div>
+                </div>
+            </button>
+            
+            <button class="btn btn-hard" onclick="startGame('hard')">
+                <div class="btn-content">
+                    <div class="btn-title">🔥 Hard</div>
+                    <div class="btn-desc">Unbeatable AI</div>
+                </div>
+            </button>
+        </div>
+
+        <div id="onlineMenu" class="hidden">
+            <button class="back-btn" onclick="backToMain()">← Back to Menu</button>
+            <h1>Play Online</h1>
+            <p class="subtitle">Create or join a room</p>
+            
+            <button class="btn btn-create" onclick="createRoom()">
+                <span>➕</span> Create New Room
+            </button>
+            
+            <div class="divider">
+                <div class="divider-line"></div>
+                <span>OR</span>
+                <div class="divider-line"></div>
+            </div>
+            
+            <input type="text" id="roomIdInput" class="input" placeholder="Enter Room ID" maxlength="6">
+            <button class="btn btn-join" onclick="joinRoom()">Join Room</button>
+            
+            <div class="info-box">
+                👥 Share the Room ID with your friend to play together!
+            </div>
+        </div>
+
+        <div id="gameBoard" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <button class="back-btn" onclick="backToMain()">← Menu</button>
+                <span id="difficultyBadge" class="difficulty-badge hidden"></span>
+            </div>
+
+            <div id="onlineInfo" class="hidden">
+                <div class="room-header">
+                    <span class="room-id">Room: <span id="displayRoomId"></span></span>
+                    <button class="copy-btn" onclick="copyRoomId()">
+                        <span id="copyIcon">📋</span> <span id="copyText">Copy</span>
+                    </button>
+                </div>
+                <div class="status">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Waiting for opponent...</span>
+                </div>
+            </div>
+
+            <div class="score-board">
+                <div class="score-item">
+                    <div class="score-value x" id="scoreX">0</div>
+                    <div class="score-label">Player X</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-value tie" id="scoreTies">0</div>
+                    <div class="score-label">Ties</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-value o" id="scoreO">0</div>
+                    <div class="score-label" id="playerOLabel">Player O</div>
+                </div>
+            </div>
+
+            <div class="game-status" id="gameStatus">Your turn!</div>
+
+            <div class="board" id="board"></div>
+
+            <button class="btn btn-reset hidden" id="resetBtn" onclick="resetGame()">
+                <span>🔄</span> Play Again
+            </button>
+
+            <div class="warning-box hidden" id="warningBox">
+                ✅ Real online multiplayer! Share the Room ID with friends anywhere in the world!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CHANGE THIS TO YOUR RENDER BACKEND URL
+        const BACKEND_URL = 'https://tictactoe-backend-ikrd.onrender.com';
+        
+        var socket = null;
+        var gameMode = null;
+        var difficulty = 'medium';
+        var board = Array(9).fill(null);
+        var currentPlayer = 'X';
+        var playerRole = null;
+        var roomId = null;
+        var isHost = false;
+        var opponentConnected = false;
+        var scores = { X: 0, O: 0, ties: 0 };
+        var gameStarted = false;
+        var winner = null;
+        var tie = false;
+
+        function selectMode(mode) {
+            gameMode = mode;
+            document.getElementById('mainMenu').classList.add('hidden');
+            
+            if (mode === 'computer') {
+                document.getElementById('difficultyMenu').classList.remove('hidden');
+            } else {
+                document.getElementById('onlineMenu').classList.remove('hidden');
+                initializeSocket();
+            }
+        }
+
+        function initializeSocket() {
+            socket = io(BACKEND_URL);
+            
+            socket.on('connect', function() {
+                console.log('Connected to server');
+            });
+            
+            socket.on('opponentJoined', function(data) {
+                opponentConnected = true;
+                gameStarted = true;
+                updateConnectionStatus();
+                updateGameStatus();
+            });
+            
+            socket.on('gameUpdate', function(data) {
+                board = data.board;
+                currentPlayer = data.currentPlayer;
+                winner = data.winner;
+                tie = data.tie;
+                scores = data.scores;
+                
+                updateScores();
+                renderBoard();
+                updateGameStatus();
+                
+                if (winner || tie) {
+                    document.getElementById('resetBtn').classList.remove('hidden');
+                }
+            });
+            
+            socket.on('gameReset', function(data) {
+                board = data.board;
+                currentPlayer = data.currentPlayer;
+                winner = null;
+                tie = false;
+                
+                document.getElementById('resetBtn').classList.add('hidden');
+                renderBoard();
+                updateGameStatus();
+            });
+            
+            socket.on('playerLeft', function() {
+                alert('Opponent left the game!');
+                backToMain();
+            });
+        }
+
+        function backToMain() {
+            document.getElementById('mainMenu').classList.remove('hidden');
+            document.getElementById('difficultyMenu').classList.add('hidden');
+            document.getElementById('onlineMenu').classList.add('hidden');
+            document.getElementById('gameBoard').classList.add('hidden');
+            
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+            
+            gameMode = null;
+            roomId = null;
+            playerRole = null;
+            isHost = false;
+            opponentConnected = false;
+            resetGameState();
+        }
+
+        function resetGameState() {
+            board = Array(9).fill(null);
+            currentPlayer = 'X';
+            winner = null;
+            tie = false;
+            gameStarted = false;
+        }
+
+        function startGame(selectedDifficulty) {
+            difficulty = selectedDifficulty;
+            playerRole = 'X';
+            gameStarted = true;
+            
+            document.getElementById('difficultyMenu').classList.add('hidden');
+            document.getElementById('gameBoard').classList.remove('hidden');
+            document.getElementById('difficultyBadge').classList.remove('hidden');
+            document.getElementById('difficultyBadge').textContent = difficulty.toUpperCase() + ' AI';
+            document.getElementById('playerOLabel').textContent = 'Computer';
+            
+            renderBoard();
+            updateGameStatus();
+        }
+
+        function createRoom() {
+            socket.emit('createRoom', function(response) {
+                if (response.success) {
+                    roomId = response.roomId;
+                    playerRole = response.playerRole;
+                    isHost = true;
+                    showGameBoard();
+                }
+            });
+        }
+
+        function joinRoom() {
+            var inputId = document.getElementById('roomIdInput').value.toUpperCase();
+            if (!inputId) return;
+            
+            socket.emit('joinRoom', inputId, function(response) {
+                if (response.success) {
+                    roomId = inputId;
+                    playerRole = response.playerRole;
+                    isHost = false;
+                    opponentConnected = true;
+                    gameStarted = true;
+                    
+                    board = response.board;
+                    currentPlayer = response.currentPlayer;
+                    scores = response.scores;
+                    
+                    showGameBoard();
+                } else {
+                    alert(response.message);
+                }
+            });
+        }
+
+        function showGameBoard() {
+            document.getElementById('onlineMenu').classList.add('hidden');
+            document.getElementById('gameBoard').classList.remove('hidden');
+            document.getElementById('onlineInfo').classList.remove('hidden');
+            document.getElementById('warningBox').classList.remove('hidden');
+            document.getElementById('displayRoomId').textContent = roomId;
+            
+            updateConnectionStatus();
+            updateScores();
+            renderBoard();
+            updateGameStatus();
+        }
+
+        function updateConnectionStatus() {
+            var dot = document.getElementById('statusDot');
+            var text = document.getElementById('statusText');
+            
+            if (opponentConnected) {
+                dot.classList.add('status-connected');
+                dot.classList.remove('status-waiting');
+                text.textContent = 'Opponent Connected';
+            } else {
+                dot.classList.add('status-waiting');
+                dot.classList.remove('status-connected');
+                text.textContent = 'Waiting for opponent...';
+            }
+        }
+
+        function copyRoomId() {
+            navigator.clipboard.writeText(roomId);
+            document.getElementById('copyIcon').textContent = '✓';
+            document.getElementById('copyText').textContent = 'Copied!';
+            
+            setTimeout(function() {
+                document.getElementById('copyIcon').textContent = '📋';
+                document.getElementById('copyText').textContent = 'Copy';
+            }, 2000);
+        }
+
+        function renderBoard() {
+            var boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            
+            for (var i = 0; i < 9; i++) {
+                var cell = document.createElement('button');
+                cell.className = 'cell';
+                cell.textContent = board[i] || '';
+                
+                if (board[i]) {
+                    cell.classList.add(board[i].toLowerCase());
+                }
+                
+                cell.onclick = (function(index) {
+                    return function() {
+                        handleCellClick(index);
+                    };
+                })(i);
+                
+                var canPlay = !winner && !tie && gameStarted &&
+                    ((gameMode === 'computer' && currentPlayer === 'X') ||
+                     (gameMode === 'online' && currentPlayer === playerRole));
+                
+                if (!canPlay || board[i]) {
+                    cell.disabled = true;
+                }
+                
+                boardElement.appendChild(cell);
+            }
+        }
+
+        function handleCellClick(index) {
+            if (board[index] || winner || tie) return;
+            
+            if (gameMode === 'online') {
+                if (currentPlayer !== playerRole) return;
+                socket.emit('makeMove', { roomId: roomId, index: index });
+            } else if (gameMode === 'computer') {
+                if (currentPlayer === 'O') return;
+                makeMove(index);
+            }
+        }
+
+        function makeMove(index, isComputerMove) {
+            board[index] = currentPlayer;
+            
+            winner = checkWinner();
+            tie = !winner && board.every(function(cell) { return cell !== null; });
+            
+            if (winner) {
+                scores[winner]++;
+                updateScores();
+            } else if (tie) {
+                scores.ties++;
+                updateScores();
+            }
+            
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            
+            renderBoard();
+            updateGameStatus();
+            
+            if (winner || tie) {
+                document.getElementById('resetBtn').classList.remove('hidden');
+            }
+            
+            if (gameMode === 'computer' && currentPlayer === 'O' && !winner && !tie) {
+                setTimeout(function() {
+                    var move = getComputerMove();
+                    if (move !== -1) {
+                        makeMove(move, true);
+                    }
+                }, 500);
+            }
+        }
+
+        function checkWinner() {
+            var lines = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8],
+                [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                [0, 4, 8], [2, 4, 6]
+            ];
+            
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i];
+                var a = line[0];
+                var b = line[1];
+                var c = line[2];
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    return board[a];
+                }
+            }
+            return null;
+        }
+
+        function getComputerMove() {
+            var available = board.map(function(cell, idx) { 
+                return cell === null ? idx : null; 
+            }).filter(function(val) { 
+                return val !== null; 
+            });
+            
+            if (difficulty === 'easy') {
+                return available[Math.floor(Math.random() * available.length)];
+            } else if (difficulty === 'medium') {
+                return Math.random() < 0.5 ? getBestMove() : available[Math.floor(Math.random() * available.length)];
+            } else {
+                return getBestMove();
+            }
+        }
+
+        function getBestMove() {
+            var bestScore = -Infinity;
+            var bestMove = -1;
+            
+            for (var i = 0; i < 9; i++) {
+                if (board[i] === null) {
+                    board[i] = 'O';
+                    var score = minimax(board, 0, false, -Infinity, Infinity);
+                    board[i] = null;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = i;
+                    }
+                }
+            }
+            return bestMove;
+        }
+
+        function minimax(board, depth, isMaximizing, alpha, beta) {
+            var winner = checkWinner();
+            if (winner === 'O') return 10 - depth;
+            if (winner === 'X') return depth - 10;
+            if (board.every(function(cell) { return cell !== null; })) return 0;
+            
+            if (isMaximizing) {
+                var maxEval = -Infinity;
+                for (var i = 0; i < 9; i++) {
+                    if (board[i] === null) {
+                        board[i] = 'O';
+                        var score = minimax(board, depth + 1, false, alpha, beta);
+                        board[i] = null;
+                        maxEval = Math.max(maxEval, score);
+                        alpha = Math.max(alpha, score);
+                        if (beta <= alpha) break;
+                    }
+                }
+                return maxEval;
+            } else {
+                var minEval = Infinity;
+                for (var i = 0; i < 9; i++) {
+                    if (board[i] === null) {
+                        board[i] = 'X';
+                        var score = minimax(board, depth + 1, true, alpha, beta);
+                        board[i] = null;
+                        minEval = Math.min(minEval, score);
+                        beta = Math.min(beta, score);
+                        if (beta <= alpha) break;
+                    }
+                }
+                return minEval;
+            }
+        }
+
+        function updateGameStatus() {
+            var status = document.getElementById('gameStatus');
+            
+            if (winner) {
+                status.className = 'game-status winner';
+                if (gameMode === 'computer') {
+                    status.textContent = winner === 'X' ? 'You win!' : 'Computer wins!';
+                } else {
+                    status.textContent = winner === playerRole ? 'You win!' : 'Player ' + winner + ' wins!';
+                }
+            } else if (tie) {
+                status.className = 'game-status tie';
+                status.textContent = 'It is a tie!';
+            } else {
+                status.className = 'game-status';
+                if (gameMode === 'computer') {
+                    status.textContent = currentPlayer === 'X' ? 'Your turn!' : 'Computer thinking...';
+                } else {
+                    status.textContent = currentPlayer === playerRole ? 'Your turn!' : 'Turn: ' + currentPlayer;
+                }
+            }
+        }
+
+        function updateScores() {
+            document.getElementById('scoreX').textContent = scores.X;
+            document.getElementById('scoreO').textContent = scores.O;
+            document.getElementById('scoreTies').textContent = scores.ties;
+        }
+
+        function resetGame() {
+            if (gameMode === 'online') {
+                socket.emit('resetGame', roomId);
+            } else {
+                board = Array(9).fill(null);
+                currentPlayer = 'X';
+                winner = null;
+                tie = false;
+                
+                document.getElementById('resetBtn').classList.add('hidden');
+                renderBoard();
+                updateGameStatus();
+            }
+        }
+    </script>
+</body>
+</html> i
