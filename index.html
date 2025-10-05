@@ -439,6 +439,9 @@
                     <div class="status-dot" id="statusDot"></div>
                     <span id="statusText">Waiting for opponent...</span>
                 </div>
+                <div style="margin-bottom: 10px; padding: 10px; background: #f0f9ff; border-radius: 8px; font-size: 0.9rem;">
+                    <strong>You are: <span id="yourRole" style="color: #7c3aed;"></span></strong>
+                </div>
             </div>
 
             <div class="score-board">
@@ -471,7 +474,6 @@
     </div>
 
     <script>
-        // CHANGE THIS TO YOUR RENDER BACKEND URL
         const BACKEND_URL = 'https://tictactoe-backend-ikrd.onrender.com';
         
         var socket = null;
@@ -501,13 +503,15 @@
         }
 
         function initializeSocket() {
+            console.log('Initializing socket connection...');
             socket = io(BACKEND_URL);
             
             socket.on('connect', function() {
-                console.log('Connected to server');
+                console.log('Connected to server, Socket ID:', socket.id);
             });
             
             socket.on('opponentJoined', function(data) {
+                console.log('Opponent joined!', data);
                 opponentConnected = true;
                 gameStarted = true;
                 updateConnectionStatus();
@@ -515,6 +519,7 @@
             });
             
             socket.on('gameUpdate', function(data) {
+                console.log('Game update received:', data);
                 board = data.board;
                 currentPlayer = data.currentPlayer;
                 winner = data.winner;
@@ -531,6 +536,7 @@
             });
             
             socket.on('gameReset', function(data) {
+                console.log('Game reset');
                 board = data.board;
                 currentPlayer = data.currentPlayer;
                 winner = null;
@@ -544,6 +550,10 @@
             socket.on('playerLeft', function() {
                 alert('Opponent left the game!');
                 backToMain();
+            });
+
+            socket.on('connect_error', function(error) {
+                console.error('Connection error:', error);
             });
         }
 
@@ -590,7 +600,9 @@
         }
 
         function createRoom() {
+            console.log('Creating room...');
             socket.emit('createRoom', function(response) {
+                console.log('Create room response:', response);
                 if (response.success) {
                     roomId = response.roomId;
                     playerRole = response.playerRole;
@@ -604,7 +616,9 @@
             var inputId = document.getElementById('roomIdInput').value.toUpperCase();
             if (!inputId) return;
             
+            console.log('Joining room:', inputId);
             socket.emit('joinRoom', inputId, function(response) {
+                console.log('Join room response:', response);
                 if (response.success) {
                     roomId = inputId;
                     playerRole = response.playerRole;
@@ -629,6 +643,7 @@
             document.getElementById('onlineInfo').classList.remove('hidden');
             document.getElementById('warningBox').classList.remove('hidden');
             document.getElementById('displayRoomId').textContent = roomId;
+            document.getElementById('yourRole').textContent = playerRole;
             
             updateConnectionStatus();
             updateScores();
@@ -683,7 +698,7 @@
                 
                 var canPlay = !winner && !tie && gameStarted &&
                     ((gameMode === 'computer' && currentPlayer === 'X') ||
-                     (gameMode === 'online' && currentPlayer === playerRole));
+                     (gameMode === 'online' && currentPlayer === playerRole && opponentConnected));
                 
                 if (!canPlay || board[i]) {
                     cell.disabled = true;
@@ -697,7 +712,15 @@
             if (board[index] || winner || tie) return;
             
             if (gameMode === 'online') {
-                if (currentPlayer !== playerRole) return;
+                if (!opponentConnected) {
+                    console.log('Waiting for opponent...');
+                    return;
+                }
+                if (currentPlayer !== playerRole) {
+                    console.log('Not your turn! Current:', currentPlayer, 'Your role:', playerRole);
+                    return;
+                }
+                console.log('Making move at index:', index);
                 socket.emit('makeMove', { roomId: roomId, index: index });
             } else if (gameMode === 'computer') {
                 if (currentPlayer === 'O') return;
@@ -834,7 +857,7 @@
                 if (gameMode === 'computer') {
                     status.textContent = winner === 'X' ? 'You win!' : 'Computer wins!';
                 } else {
-                    status.textContent = winner === playerRole ? 'You win!' : 'Player ' + winner + ' wins!';
+                    status.textContent = winner === playerRole ? 'You win! 🎉' : 'Opponent wins!';
                 }
             } else if (tie) {
                 status.className = 'game-status tie';
@@ -844,7 +867,13 @@
                 if (gameMode === 'computer') {
                     status.textContent = currentPlayer === 'X' ? 'Your turn!' : 'Computer thinking...';
                 } else {
-                    status.textContent = currentPlayer === playerRole ? 'Your turn!' : 'Turn: ' + currentPlayer;
+                    if (!opponentConnected) {
+                        status.textContent = 'Waiting for opponent to join...';
+                    } else if (currentPlayer === playerRole) {
+                        status.textContent = 'Your turn! (You are ' + playerRole + ')';
+                    } else {
+                        status.textContent = 'Opponent is thinking... (Turn: ' + currentPlayer + ')';
+                    }
                 }
             }
         }
@@ -871,4 +900,4 @@
         }
     </script>
 </body>
-</html> i
+</html>
