@@ -679,12 +679,19 @@
 
         function renderBoard() {
             var boardElement = document.getElementById('board');
+            if (!boardElement) {
+                console.error('Board element not found!');
+                return;
+            }
+            
             boardElement.innerHTML = '';
+            console.log('Rendering board. Current player:', currentPlayer, 'Your role:', playerRole, 'Board state:', board);
             
             for (var i = 0; i < 9; i++) {
                 var cell = document.createElement('button');
                 cell.className = 'cell';
                 cell.textContent = board[i] || '';
+                cell.setAttribute('data-index', i);
                 
                 if (board[i]) {
                     cell.classList.add(board[i].toLowerCase());
@@ -692,6 +699,7 @@
                 
                 cell.onclick = (function(index) {
                     return function() {
+                        console.log('Cell clicked:', index, 'Board value:', board[index]);
                         handleCellClick(index);
                     };
                 })(i);
@@ -700,12 +708,20 @@
                     ((gameMode === 'computer' && currentPlayer === 'X') ||
                      (gameMode === 'online' && currentPlayer === playerRole && opponentConnected));
                 
+                console.log('Cell', i, '- Can play:', canPlay, 'Has value:', board[i]);
+                
                 if (!canPlay || board[i]) {
                     cell.disabled = true;
+                    cell.style.opacity = board[i] ? '1' : '0.6';
+                } else {
+                    cell.disabled = false;
+                    cell.style.opacity = '1';
                 }
                 
                 boardElement.appendChild(cell);
             }
+            
+            console.log('Board rendered successfully');
         }
 
         function handleCellClick(index) {
