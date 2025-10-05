@@ -519,12 +519,21 @@
             });
             
             socket.on('gameUpdate', function(data) {
-                console.log('Game update received:', data);
+                console.log('=== GAME UPDATE RECEIVED ===');
+                console.log('Full data:', JSON.stringify(data));
+                console.log('Board:', data.board);
+                console.log('Current player:', data.currentPlayer);
+                console.log('Winner:', data.winner);
+                console.log('Tie:', data.tie);
+                console.log('Scores:', data.scores);
+                
                 board = data.board;
                 currentPlayer = data.currentPlayer;
                 winner = data.winner;
                 tie = data.tie;
                 scores = data.scores;
+                
+                console.log('Local state updated');
                 
                 updateScores();
                 renderBoard();
@@ -533,6 +542,8 @@
                 if (winner || tie) {
                     document.getElementById('resetBtn').classList.remove('hidden');
                 }
+                
+                console.log('=== UPDATE COMPLETE ===');
             });
             
             socket.on('gameReset', function(data) {
@@ -725,21 +736,53 @@
         }
 
         function handleCellClick(index) {
-            if (board[index] || winner || tie) return;
+            console.log('=== CELL CLICK DEBUG ===');
+            console.log('Clicked index:', index);
+            console.log('Board value at index:', board[index]);
+            console.log('Winner:', winner);
+            console.log('Tie:', tie);
+            console.log('Game mode:', gameMode);
+            console.log('Current player:', currentPlayer);
+            console.log('Your role:', playerRole);
+            console.log('Opponent connected:', opponentConnected);
+            console.log('Game started:', gameStarted);
+            
+            if (board[index]) {
+                console.log('BLOCKED: Cell already has a value');
+                return;
+            }
+            
+            if (winner) {
+                console.log('BLOCKED: Game already has a winner');
+                return;
+            }
+            
+            if (tie) {
+                console.log('BLOCKED: Game is tied');
+                return;
+            }
             
             if (gameMode === 'online') {
                 if (!opponentConnected) {
-                    console.log('Waiting for opponent...');
+                    console.log('BLOCKED: Waiting for opponent to connect');
+                    alert('Waiting for opponent to join!');
                     return;
                 }
                 if (currentPlayer !== playerRole) {
-                    console.log('Not your turn! Current:', currentPlayer, 'Your role:', playerRole);
+                    console.log('BLOCKED: Not your turn! Current:', currentPlayer, 'Your role:', playerRole);
+                    alert('Not your turn! Wait for opponent. You are ' + playerRole);
                     return;
                 }
-                console.log('Making move at index:', index);
+                console.log('✓ All checks passed! Sending move to server...');
+                console.log('Emitting makeMove with roomId:', roomId, 'index:', index);
                 socket.emit('makeMove', { roomId: roomId, index: index });
+                console.log('Move emitted successfully');
             } else if (gameMode === 'computer') {
-                if (currentPlayer === 'O') return;
+                if (currentPlayer === 'O') {
+                    console.log('BLOCKED: Computer turn');
+                    return;
+                }
+                console.log('✓ Making computer mode move');
                 makeMove(index);
             }
         }
