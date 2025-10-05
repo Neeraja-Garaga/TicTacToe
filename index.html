@@ -697,6 +697,7 @@
             
             boardElement.innerHTML = '';
             console.log('Rendering board. Current player:', currentPlayer, 'Your role:', playerRole, 'Board state:', board);
+            console.log('Game mode:', gameMode, 'Opponent connected:', opponentConnected, 'Game started:', gameStarted);
             
             for (var i = 0; i < 9; i++) {
                 var cell = document.createElement('button');
@@ -715,18 +716,26 @@
                     };
                 })(i);
                 
-                var canPlay = !winner && !tie && gameStarted &&
-                    ((gameMode === 'computer' && currentPlayer === 'X') ||
-                     (gameMode === 'online' && currentPlayer === playerRole && opponentConnected));
+                var canPlay = false;
                 
-                console.log('Cell', i, '- Can play:', canPlay, 'Has value:', board[i]);
+                if (gameMode === 'computer') {
+                    canPlay = !winner && !tie && gameStarted && currentPlayer === 'X' && !board[i];
+                } else if (gameMode === 'online') {
+                    canPlay = !winner && !tie && gameStarted && opponentConnected && currentPlayer === playerRole && !board[i];
+                }
                 
-                if (!canPlay || board[i]) {
-                    cell.disabled = true;
-                    cell.style.opacity = board[i] ? '1' : '0.6';
-                } else {
+                console.log('Cell', i, '- Can play:', canPlay, 'Has value:', board[i], 'Winner:', winner, 'Tie:', tie);
+                
+                if (canPlay) {
                     cell.disabled = false;
                     cell.style.opacity = '1';
+                    cell.style.cursor = 'pointer';
+                } else {
+                    cell.disabled = false;
+                    cell.style.opacity = board[i] ? '1' : '0.6';
+                    if (board[i]) {
+                        cell.style.cursor = 'not-allowed';
+                    }
                 }
                 
                 boardElement.appendChild(cell);
@@ -746,6 +755,11 @@
             console.log('Your role:', playerRole);
             console.log('Opponent connected:', opponentConnected);
             console.log('Game started:', gameStarted);
+            
+            if (!gameStarted) {
+                console.log('BLOCKED: Game not started');
+                return;
+            }
             
             if (board[index]) {
                 console.log('BLOCKED: Cell already has a value');
@@ -770,13 +784,16 @@
                 }
                 if (currentPlayer !== playerRole) {
                     console.log('BLOCKED: Not your turn! Current:', currentPlayer, 'Your role:', playerRole);
-                    alert('Not your turn! Wait for opponent. You are ' + playerRole);
+                    alert('Not your turn! Wait for opponent. You are ' + playerRole + ', current turn is ' + currentPlayer);
                     return;
                 }
                 console.log('✓ All checks passed! Sending move to server...');
-                console.log('Emitting makeMove with roomId:', roomId, 'index:', index);
+                console.log('Emitting makeMove event');
+                console.log('Data being sent - roomId:', roomId, 'index:', index);
+                
                 socket.emit('makeMove', { roomId: roomId, index: index });
-                console.log('Move emitted successfully');
+                
+                console.log('Move emitted, waiting for server response...');
             } else if (gameMode === 'computer') {
                 if (currentPlayer === 'O') {
                     console.log('BLOCKED: Computer turn');
